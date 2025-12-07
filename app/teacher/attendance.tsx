@@ -2,30 +2,45 @@
 import { useEffect, useState } from "react";
 
 export default function TeacherAttendance() {
-  const [students, setStudents] = useState([]);
-  const [attendance, setAttendance] = useState({});
+  const [students, setStudents] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch("/api/students").then(r => r.json()).then(setStudents);
+    fetch("/api/students")
+      .then(r => r.json())
+      .then(setStudents)
+      .catch(err => console.error("Failed to load students", err));
   }, []);
 
   const handleAttendanceChange = (studentId: string, status: string) => {
-    setAttendance({ ...attendance, [studentId]: status });
+    setAttendance(prev => ({ ...prev, [studentId]: status }));
   };
 
   const handleSubmit = async () => {
-    for (const studentId in attendance) {
-      await fetch("/api/teachers/attendance", {
-        method: "POST",
-        body: JSON.stringify({ studentId, status: attendance[studentId], date: new Date() }),
-      });
+    try {
+      for (const studentId in attendance) {
+        await fetch("/api/teachers/attendance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            studentId,
+            status: attendance[studentId],
+            date: new Date().toISOString()
+          }),
+        });
+      }
+
+      alert("Attendance submitted!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit attendance!");
     }
-    alert("Attendance submitted!");
   };
 
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">Mark Attendance</h1>
+
       <div className="overflow-x-auto">
         <table className="w-full table-auto border-collapse">
           <thead>
@@ -42,7 +57,9 @@ export default function TeacherAttendance() {
                   <select
                     className="p-2 border rounded w-full"
                     onChange={e => handleAttendanceChange(student._id, e.target.value)}
+                    defaultValue=""
                   >
+                    <option value="">Select</option>
                     <option value="Present">Present</option>
                     <option value="Absent">Absent</option>
                   </select>
